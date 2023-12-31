@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vue.js API Table with Sorting and Filtering</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="app">
+
+        <div class="ui fixed inverted menu">
+            <div class="ui grid container">
+
+                <div class="three column row">
+                        
+                    <div class="column" >
+                        <div class="ui input focus">
+                            <input type="text" v-model="filter" placeholder="Filtrar linhas" class="filter-input">
+                        </div></div>
+          
+                    <div class="column" ><div class="ui buttons little">
+                        <button
+                        class="ui button toggle"
+                        @click="toggle2"
+                        :class="[showCreditCard ? 'active' : '']"
+                        >Tudo</button>
+                        <button
+                        class="ui button toggle"
+                        @click="toggle2"
+                        :class="[!showCreditCard ? 'active' : '']"
+                        >Inter</button>
+                    </div></div>
+
+                    <div class="column" ><div class="ui buttons little">
+                        <button
+                        class="ui button toggle"
+                        :class="[isActive ? 'green' : 'blue']"
+                        @click="toggle"
+                    >{{isActive ? 'ida' : 'ida/volta'}}</button>
+                        </div></div>
+                 
+                    <!-- <div class="column" ></div>
+                     -->
+                </div>
+
+                <div class="five column row cabecalho">
+                    <div class="column" @click="sort('formattedDepartureDate')">Ida</div>
+                    <div class="column" @click="sort('formattedReturnDate')">Volta</div>
+                    <div class="column" @click="sort('originAirportCode')">Origem</div>
+                    <div class="column" @click="sort('destinationCity')">Cidade</div>
+                    <div class="column" @click="sort('totalPrice')">Pontos</div>
+                 </div>
+            </div>
+          </div>
+   
+            <div >
+            <div class="ui grid container">
+
+            </div>
+            </div>
+
+            <div  class="ui grid container tabela-linha">
+                <div v-for="fare in filteredFares" :key="fare.id" @click="redirect(fare)"  class="five column  row linha">
+                    <div class="column">{{ fare.formattedDepartureDate }}</div>
+                    <div class="column">{{ fare.formattedReturnDate }}</div>
+                    <div class="column">{{ fare.originAirportCode }}</div>
+                    <div class="column">{{ fare.destinationCity }}</div>
+                    <div class="column">{{ fare.precoFormatado }}</div>
+                 </div>
+            </div>
+
+
+    <!-- Import Vue.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="payload.js"></script>
+    <script>
+    
+
+    new Vue({
+    el: '#app',
+    data: {
+        fares: [],
+        filter: '',
+        sortKey: 'totalPrice',
+        sortDirection: 1,
+        isActive: false,
+        showCreditCard: true,
+        requests: window.request
+    },
+    computed: {
+        filteredFares() {
+            let filtered = this.fares.filter(fare => {
+
+                if(typeof fare.totalPrice === 'number')
+                    fare.precoFormatado = (fare.totalPrice / 1000) + "K"
+                
+                return Object.values(fare).join(' ').toLowerCase().includes(this.filter.toLowerCase());
+            });
+            
+
+            if (this.sortKey) {
+                filtered.sort((a, b) => {
+                    a = a[this.sortKey];
+                    b = b[this.sortKey];
+                    if (typeof a === 'number' && typeof b === 'number') {
+                        return (a - b) * this.sortDirection;
+                    } else {
+                        return a.toString().localeCompare(b.toString()) * this.sortDirection;
+                    }
+                });
+            }
+
+            return filtered;
+        }
+    },
+    methods: {    
+        toggle2() {
+      this.showCreditCard = !this.showCreditCard;
+    },
+        async toggle() {
+                if(this.isActive){
+                    this.isActive = false
+                    this.fares = []
+                    await this.chamarApi({code: "CGH", geoId: "6301857"},"64de11b8eb1aef385f06977a");
+                    await this.chamarApi({code: "GRU", geoId: "6300629"},"64de11b8eb1aef385f06977a");
+                    await this.chamarApi({code: "VCP", geoId: "6300637"},"64de11b8eb1aef385f06977a");
+                    
+                }else{
+                    this.isActive = true
+                    this.fares = []
+                    await this.chamarApi({code: "CGH", geoId: "6301857"},"6509bb6f61285648c409de19");
+                    await this.chamarApi({code: "GRU", geoId: "6300629"},"6509bb6f61285648c409de19");
+                    await this.chamarApi({code: "VCP", geoId: "6300637"}, "6509bb6f61285648c409de19");
+                   
+                }
+        }, 
+        async chamarApi(origem,tipo) {
+            const url = 'https://vg-api.airtrfx.com/graphql';
+            let results = [];
+          
+            var request = this.requests
+            for (let i = 0; i < 6; i++) {
+
+                request.variables.filters.origin = origem
+                request.variables.pageNumber = i+1
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                    'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(request),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    const encontrados = data.data.standardFareModule.fares;
+                    results = results.concat(encontrados);
+
+                    if((this.isActive && tipo == "6509bb6f61285648c409de19") || (this.isActive == false && tipo == "64de11b8eb1aef385f06977a"))
+                      this.fares = this.fares.concat(encontrados);
+                
+                } else {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                
+            }
+
+            return results;
+        },
+        sort(key) {
+            if(this.sortKey === key) {
+                this.sortDirection = -this.sortDirection;
+            } else {
+                this.sortKey = key;
+                this.sortDirection = 1;
+            }
+        },
+        redirect(fare) {
+          // Aqui você pode construir a URL com base nos dados do fare
+          const url = `https://www.voeazul.com.br/br/pt/home/selecao-voo?c[0].ds=${fare.originAirportCode}&c[0].as=${fare.destinationAirportCode}&c[0].std=${window.formatar(fare.formattedDepartureDate)}&p[0].t=ADT&p[0].c=1&p[0].cp=false&cc=PTS&f.dl=3&f.dr=3&c[1].ds=${fare.destinationAirportCode}&c[1].as=${fare.originAirportCode}&c[1].std=${window.formatar(fare.formattedReturnDate)}&utm_linkcategory=everymundo`;
+
+
+          window.open(url, '_blank');
+
+          
+        }
+    },
+    async mounted() {
+ 
+    }
+});
+
+    </script>
+    </div>
+</body>
+
+</html>

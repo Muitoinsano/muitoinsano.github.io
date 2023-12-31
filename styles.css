@@ -1,0 +1,25 @@
+div {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: Montserrat, sans-serif;
+  }
+
+  .cabecalho {
+    background-color: #3d3d3d;
+    color: white;
+  }
+
+  .cabecalho > div.column:hover {
+    background-color: #000000;
+    cursor: pointer;
+  }
+  
+
+  .linha:hover{
+     background-color: #5069d666;
+ }
+
+.tabela-linha{
+margin-top: 130px!important;
+
+}
