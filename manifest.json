@@ -1,0 +1,11 @@
+{
+    "name": "Viagens Azul - Ofertas",
+    "short_name": "Viagens Azul",
+    "start_url": "index.html",
+    "display": "standalone",
+    "background_color": "#fdfdfd",
+    "theme_color": "#db4938",
+    "orientation": "portrait-primary",
+    "icons": [
+    ]
+  }
